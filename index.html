@@ -1,0 +1,865 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Doomscroll Farm</title>
+<style>
+  /* Layout concept: a wall of phone screens that scroll themselves; the shop below turns
+     your thumb into a workforce of bots. Single committed dark/night-mode palette —
+     this is an app screen at 2am, it doesn't have a light mode. */
+  :root{
+    --bg:#0a0a10;
+    --surface:#15151f;
+    --surface-2:#1d1d2a;
+    --line:#2a2a3a;
+    --fg:#eceaf4;
+    --muted:#8c8898;
+    --accent:#ff3b6e;     /* like-button pink */
+    --accent-2:#7c5cff;   /* bot violet */
+    --good:#36d399;
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk',system-ui,sans-serif;
+  }
+  .num{ font-variant-numeric: tabular-nums; }
+
+  .app{
+    max-width:1100px;
+    margin:0 auto;
+    padding-left:max(16px, env(safe-area-inset-left,0px));
+    padding-right:max(16px, env(safe-area-inset-right,0px));
+    padding-block:20px 48px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+  }
+
+  /* ---------- header ---------- */
+  .topbar{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    z-index:10;
+    background:linear-gradient(var(--bg) 85%, transparent);
+    padding-block:10px 6px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:12px 20px;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin-right:auto;
+  }
+  .brand h1{
+    font-size:1.35rem;
+    margin:0;
+    letter-spacing:-0.02em;
+  }
+  .brand .tag{
+    color:var(--muted);
+    font-size:.78rem;
+  }
+  .stats{
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  .stat{
+    display:flex;
+    flex-direction:column;
+    line-height:1.15;
+  }
+  .stat .label{
+    font-size:.68rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+  }
+  .stat .value{
+    font-size:1.15rem;
+    font-weight:600;
+  }
+  .stat .value.pink{ color:var(--accent); }
+  .stat .value.violet{ color:var(--accent-2); }
+
+  .rank-pill{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 14px;
+    font-size:.78rem;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .rank-pill b{ color:var(--fg); font-weight:600; }
+
+  /* ---------- frenzy ---------- */
+  .frenzy-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .frenzy-btn{
+    position:relative;
+    overflow:hidden;
+    border:none;
+    border-radius:12px;
+    padding:12px 20px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:.92rem;
+    color:#fff;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    cursor:pointer;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  .frenzy-btn:active{ transform:scale(.97); }
+  .frenzy-btn:disabled{
+    cursor:default;
+    opacity:.45;
+    background:var(--surface-2);
+    color:var(--muted);
+  }
+  .frenzy-note{ font-size:.78rem; color:var(--muted); }
+  .frenzy-bar-track{
+    flex:1 1 140px;
+    min-width:0;
+    height:6px;
+    border-radius:999px;
+    background:var(--surface-2);
+    overflow:hidden;
+  }
+  .frenzy-bar-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .1s linear;
+  }
+
+  /* ---------- phones ---------- */
+  .phones{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px,1fr));
+    gap:14px;
+  }
+  .phone{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .phone-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:2px 6px;
+    font-size:.68rem;
+    color:var(--muted);
+  }
+  .phone-head .bot-badge{
+    color:var(--accent-2);
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:3px;
+  }
+  .feed{
+    position:relative;
+    height:230px;
+    overflow-y:auto;
+    scroll-behavior:smooth;
+    border-radius:14px;
+    background:var(--bg);
+    cursor:pointer;
+    user-select:none;
+    scrollbar-width:none;
+  }
+  .feed::-webkit-scrollbar{ display:none; }
+  .post{
+    height:230px;
+    padding:14px 12px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    gap:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .post .thumb{
+    position:absolute;
+    inset:0 0 auto 0;
+    height:230px;
+    opacity:.55;
+  }
+  .post-inner{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .caption{
+    font-size:.78rem;
+    line-height:1.35;
+    text-shadow:0 1px 6px rgba(0,0,0,.6);
+  }
+  .engage{
+    display:flex;
+    gap:10px;
+    font-size:.68rem;
+    color:var(--muted);
+  }
+  .engage span{ display:inline-flex; align-items:center; gap:3px; }
+
+  .tap-flash{
+    position:absolute;
+    inset:0;
+    background:#fff;
+    opacity:0;
+    pointer-events:none;
+    border-radius:14px;
+  }
+  @keyframes flash{ 0%{opacity:.18;} 100%{opacity:0;} }
+  .feed.tapped .tap-flash{ animation:flash .25s ease-out; }
+
+  .floater{
+    position:absolute;
+    left:50%;
+    bottom:40%;
+    transform:translateX(-50%);
+    color:var(--accent);
+    font-weight:700;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:.95rem;
+    pointer-events:none;
+    animation:rise .7s ease-out forwards;
+  }
+  @keyframes rise{
+    0%{ opacity:1; transform:translate(-50%,0); }
+    100%{ opacity:0; transform:translate(-50%,-34px); }
+  }
+
+  /* ---------- shop ---------- */
+  .panels{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:560px){
+    .panels{ grid-template-columns:1fr; }
+  }
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    min-width:0;
+  }
+  .panel h2{
+    font-size:.95rem;
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .panel h2 .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    flex:none;
+  }
+  .panel.bots h2 .dot{ background:var(--accent-2); }
+
+  .shop-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 12px;
+  }
+  .shop-item .info{ flex:1; min-width:0; }
+  .shop-item .name{ font-size:.85rem; font-weight:600; }
+  .shop-item .desc{ font-size:.72rem; color:var(--muted); margin-top:1px; }
+  .shop-item .owned{ font-size:.7rem; color:var(--muted); margin-top:3px; }
+  .buy-btn{
+    flex:none;
+    border:none;
+    border-radius:10px;
+    padding:9px 12px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:.78rem;
+    color:#fff;
+    background:var(--accent);
+    cursor:pointer;
+    min-width:72px;
+    text-align:center;
+  }
+  .panel.bots .buy-btn{ background:var(--accent-2); }
+  .buy-btn:disabled{
+    background:var(--surface-2);
+    color:var(--muted);
+    cursor:default;
+  }
+
+  .upgrades-list{ display:flex; flex-direction:column; gap:8px; }
+  .upgrades-list .shop-item.locked{ opacity:.45; }
+  .upgrades-list .shop-item.done{
+    border-color:var(--good);
+  }
+  .upgrades-list .shop-item.done .buy-btn{
+    background:var(--good);
+  }
+
+  footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    color:var(--muted);
+    font-size:.72rem;
+    padding-top:6px;
+    border-top:1px solid var(--line);
+  }
+  .reset-btn{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:.72rem;
+    cursor:pointer;
+  }
+  .reset-btn:hover{ color:var(--accent); border-color:var(--accent); }
+
+  @media (prefers-reduced-motion: reduce){
+    .feed{ scroll-behavior:auto; }
+    .floater, .tap-flash{ animation:none !important; }
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>📱 Doomscroll Farm</h1>
+      <span class="tag">a scroll farming simulator</span>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <span class="label">Scrolls</span>
+        <span class="value pink num" id="scrollsDisplay">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">Per second</span>
+        <span class="value violet num" id="rateDisplay">0.0</span>
+      </div>
+    </div>
+    <div class="rank-pill">Rank: <b id="rankDisplay">Casual Browser</b></div>
+  </div>
+
+  <div class="frenzy-row">
+    <button class="frenzy-btn" id="frenzyBtn">🌀 Doom Spiral (x5, 10s)</button>
+    <div class="frenzy-bar-track"><div class="frenzy-bar-fill" id="frenzyBar"></div></div>
+    <span class="frenzy-note" id="frenzyNote">ready</span>
+  </div>
+
+  <div class="phones" id="phonesWrap"></div>
+
+  <div class="panels">
+    <div class="panel screens">
+      <h2><span class="dot"></span>Expand the farm</h2>
+      <div class="shop-item">
+        <div class="info">
+          <div class="name">Open a screen</div>
+          <div class="desc">+1 feed to tap. Each thumb only has so much range.</div>
+          <div class="owned"><span id="screenOwned">1</span> open</div>
+        </div>
+        <button class="buy-btn" id="buyScreen">Buy<br><span class="num" id="screenCost"></span></button>
+      </div>
+      <div class="shop-item">
+        <div class="info">
+          <div class="name">Bigger thumbs</div>
+          <div class="desc">+1 scroll per tap, permanently.</div>
+          <div class="owned">level <span id="clickLvl">0</span> · now +<span id="clickPowerNow">1</span>/tap</div>
+        </div>
+        <button class="buy-btn" id="buyClick">Buy<br><span class="num" id="clickCost"></span></button>
+      </div>
+    </div>
+
+    <div class="panel bots">
+      <h2><span class="dot"></span>Automate it</h2>
+      <div class="shop-item">
+        <div class="info">
+          <div class="name">Hire a scroll bot</div>
+          <div class="desc">Scrolls for you, forever, no bathroom breaks.</div>
+          <div class="owned"><span id="botOwned">0</span> working</div>
+        </div>
+        <button class="buy-btn" id="buyBot">Buy<br><span class="num" id="botCost"></span></button>
+      </div>
+      <div class="shop-item">
+        <div class="info">
+          <div class="name">Bot firmware update</div>
+          <div class="desc">+0.5 scrolls/sec per bot you already own.</div>
+          <div class="owned">level <span id="firmLvl">0</span> · each bot gives <span id="botRateNow">1.0</span>/sec</div>
+        </div>
+        <button class="buy-btn" id="buyFirm">Buy<br><span class="num" id="firmCost"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="dot"></span>Milestones</h2>
+    <div class="upgrades-list" id="upgradesWrap"></div>
+  </div>
+
+  <footer>
+    <span>Lifetime scrolls: <b class="num" id="lifetimeDisplay">0</b> · autosaves to this browser.</span>
+    <button class="reset-btn" id="resetBtn">reset farm</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- state ---------------- */
+  var defaultState = {
+    scrolls: 0,
+    lifetime: 0,
+    screens: 1,
+    bots: 0,
+    clickLevel: 0,
+    firmLevel: 0,
+    upgrades: {},          // id -> true once bought
+    frenzyUntil: 0,        // ms timestamp, active while now < this
+    frenzyReadyAt: 0        // ms timestamp, usable once now >= this
+  };
+  var state = loadState();
+
+  var MAX_SCREENS = 6;
+
+  var UPGRADES = [
+    { id:"notifs", name:"Push notifications", desc:"+1 scroll per tap, flat.",
+      unlock:function(s){ return s.screens >= 3; }, unlockHint:"open 3 screens",
+      cost:400, apply:function(){ /* folded into clickPower() */ } },
+    { id:"ads", name:"Targeted ads", desc:"All scrolls x1.5, permanently.",
+      unlock:function(s){ return s.lifetime >= 500; }, unlockHint:"reach 500 lifetime scrolls",
+      cost:600, apply:function(){ /* folded into multiplier() */ } },
+    { id:"algo", name:"Infinite scroll algorithm", desc:"All scrolls x2, permanently.",
+      unlock:function(s){ return s.bots >= 10; }, unlockHint:"hire 10 bots",
+      cost:5000, apply:function(){ /* folded into multiplier() */ } }
+  ];
+
+  var RANKS = [
+    [0, "Casual Browser"],
+    [100, "Feed Grazer"],
+    [500, "Thumb Calloused"],
+    [2000, "Scroll Zombie"],
+    [10000, "Algorithm's Favorite"],
+    [50000, "Terminally Online"],
+    [250000, "Touch Grass: Error 404"]
+  ];
+
+  /* ---------------- economy ---------------- */
+  function screenCost(n){ return Math.ceil(20 * Math.pow(1.65, n - 1)); }     // n = screens after buying
+  function botCost(n){ return Math.ceil(45 * Math.pow(1.17, n)); }            // n = bots owned before buying
+  function clickCost(n){ return Math.ceil(35 * Math.pow(1.9, n)); }           // n = clickLevel before buying
+  function firmCost(n){ return Math.ceil(110 * Math.pow(2.0, n)); }           // n = firmLevel before buying
+
+  function clickPower(){
+    var p = 1 + state.clickLevel;
+    if(state.upgrades.notifs) p += 1;
+    return p;
+  }
+  function botRate(){
+    return 1 + state.firmLevel * 0.5;
+  }
+  function multiplier(){
+    var m = 1;
+    if(state.upgrades.ads) m *= 1.5;
+    if(state.upgrades.algo) m *= 2;
+    if(Date.now() < state.frenzyUntil) m *= 5;
+    return m;
+  }
+  function scrollsPerSecond(){
+    return state.bots * botRate() * multiplier();
+  }
+
+  function rankFor(lifetime){
+    var r = RANKS[0][1];
+    for(var i=0;i<RANKS.length;i++){
+      if(lifetime >= RANKS[i][0]) r = RANKS[i][1];
+    }
+    return r;
+  }
+
+  /* ---------------- feed content ---------------- */
+  var HOOKS = ["POV:", "Wait for it…", "Tell me why", "Nobody:", "Day 247 of", "This you?",
+    "Rare footage of", "When the algorithm decides", "Plot twist:", "Breaking:", "POV you just woke up and",
+    "Me explaining to my therapist"];
+  var SUBJECTS = ["my cat judging my life choices", "a guy microwaving fish at work",
+    "someone finding $3 on the sidewalk", "my group chat at 2am", "a raccoon doing taxes",
+    "my houseplant unionizing", "a pigeon with main character energy", "my search history",
+    "the last slice of pizza", "my sleep schedule", "a man yelling at clouds",
+    "my productivity app's notifications", "three unread texts from mom", "this random guy's opinion on soup",
+    "my browser with 400 tabs open", "a squirrel reviewing my parking job"];
+  var TAILS = ["and it changed everything.", "no cap.", "and I'm not okay.", "send help.",
+    "iconic behavior.", "this is not a drill.", "and the comments are unhinged.", "we are so back.",
+    "it's giving unemployed.", "rent free in my head.", "and nobody asked.", "10/10, no notes."];
+  var GRADIENTS = [
+    "linear-gradient(135deg,#ff3b6e,#7c5cff)",
+    "linear-gradient(135deg,#36d399,#7c5cff)",
+    "linear-gradient(135deg,#ffb020,#ff3b6e)",
+    "linear-gradient(135deg,#7c5cff,#36d399)",
+    "linear-gradient(135deg,#ff3b6e,#ffb020)"
+  ];
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function fmtEngage(n){
+    if(n >= 1000000) return (n/1000000).toFixed(1)+"M";
+    if(n >= 1000) return (n/1000).toFixed(1)+"K";
+    return String(n);
+  }
+  function randomPostHTML(){
+    var caption = pick(HOOKS) + " " + pick(SUBJECTS) + " " + pick(TAILS);
+    var likes = fmtEngage(Math.floor(Math.random()*900000)+120);
+    var comments = fmtEngage(Math.floor(Math.random()*4000)+8);
+    var shares = fmtEngage(Math.floor(Math.random()*2000)+3);
+    return (
+      '<div class="post">' +
+        '<div class="thumb" style="background:'+pick(GRADIENTS)+'"></div>' +
+        '<div class="post-inner">' +
+          '<div class="caption">'+caption+'</div>' +
+          '<div class="engage">' +
+            '<span>❤️ '+likes+'</span>' +
+            '<span>💬 '+comments+'</span>' +
+            '<span>🔁 '+shares+'</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  /* ---------------- rendering ---------------- */
+  var phonesWrap = document.getElementById("phonesWrap");
+  var phoneEls = [];        // { root, feed }
+  var autoScrollTimers = [];
+
+  function buildPhone(index){
+    var root = document.createElement("div");
+    root.className = "phone";
+    root.innerHTML =
+      '<div class="phone-head"><span>screen '+(index+1)+'</span><span class="bot-badge" style="visibility:hidden">🤖 auto</span></div>' +
+      '<div class="feed"><div class="tap-flash"></div></div>';
+    var feed = root.querySelector(".feed");
+    for(var i=0;i<4;i++){ feed.insertAdjacentHTML("beforeend", randomPostHTML()); }
+
+    feed.addEventListener("click", function(e){ onTap(index, e); });
+    feed.addEventListener("scroll", function(){ maybeGrowFeed(feed); });
+
+    phonesWrap.appendChild(root);
+    phoneEls.push({ root:root, feed:feed });
+  }
+
+  function maybeGrowFeed(feed){
+    if(feed.scrollTop + feed.clientHeight > feed.scrollHeight - 250){
+      feed.insertAdjacentHTML("beforeend", randomPostHTML());
+      while(feed.children.length > 30){ feed.removeChild(feed.firstElementChild); }
+    }
+  }
+
+  function syncScreenCount(){
+    while(phoneEls.length < state.screens){ buildPhone(phoneEls.length); }
+  }
+
+  function onTap(index, e){
+    var entry = phoneEls[index];
+    var feed = entry.feed;
+    feed.classList.remove("tapped"); void feed.offsetWidth; feed.classList.add("tapped");
+
+    var gained = clickPower() * multiplier();
+    addScrolls(gained);
+    floatNumber(feed, e, gained);
+
+    feed.scrollBy({ top: 230, behavior: "smooth" });
+    maybeGrowFeed(feed);
+  }
+
+  function floatNumber(feed, e, amount){
+    var el = document.createElement("div");
+    el.className = "floater";
+    el.textContent = "+" + round1(amount);
+    var rect = feed.getBoundingClientRect();
+    var x = (e && e.clientX ? e.clientX - rect.left : rect.width/2);
+    el.style.left = Math.max(20, Math.min(rect.width-20, x)) + "px";
+    feed.style.position = "relative";
+    feed.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 750);
+  }
+
+  function round1(n){ return Math.round(n*10)/10; }
+  function fmt(n){
+    n = Math.floor(n);
+    return n.toLocaleString("en-US");
+  }
+
+  /* ---------------- bots: ambient auto-scroll ---------------- */
+  function refreshBotBadges(){
+    var active = state.bots > 0;
+    for(var i=0;i<phoneEls.length;i++){
+      var badge = phoneEls[i].root.querySelector(".bot-badge");
+      badge.style.visibility = active ? "visible" : "hidden";
+    }
+  }
+
+  var ambientTimer = null;
+  function restartAmbientScroll(){
+    if(ambientTimer) clearInterval(ambientTimer);
+    if(state.bots <= 0 || phoneEls.length === 0) return;
+    // More bots -> faster ambient scrolling, spread across all open screens.
+    var intervalMs = Math.max(220, 1400 / Math.sqrt(state.bots));
+    var cursor = 0;
+    ambientTimer = setInterval(function(){
+      var entry = phoneEls[cursor % phoneEls.length];
+      cursor++;
+      entry.feed.scrollBy({ top: 48, behavior: "smooth" });
+      maybeGrowFeed(entry.feed);
+    }, intervalMs);
+  }
+
+  /* ---------------- currency & ticking ---------------- */
+  function addScrolls(n){
+    state.scrolls += n;
+    state.lifetime += n;
+  }
+
+  var lastTick = Date.now();
+  function tick(){
+    var now = Date.now();
+    var dt = (now - lastTick) / 1000;
+    lastTick = now;
+    if(dt > 0) addScrolls(scrollsPerSecond() * dt);
+    render();
+  }
+  setInterval(tick, 150);
+  setInterval(saveState, 4000);
+
+  /* ---------------- frenzy ---------------- */
+  var frenzyBtn = document.getElementById("frenzyBtn");
+  var frenzyBar = document.getElementById("frenzyBar");
+  var frenzyNote = document.getElementById("frenzyNote");
+  var FRENZY_COOLDOWN = 30000;
+  var FRENZY_DURATION = 10000;
+
+  frenzyBtn.addEventListener("click", function(){
+    var now = Date.now();
+    if(now < state.frenzyReadyAt) return;
+    state.frenzyUntil = now + FRENZY_DURATION;
+    state.frenzyReadyAt = now + FRENZY_DURATION + FRENZY_COOLDOWN;
+    saveState();
+  });
+
+  function renderFrenzy(){
+    var now = Date.now();
+    if(now < state.frenzyUntil){
+      var left = state.frenzyUntil - now;
+      frenzyBtn.disabled = true;
+      frenzyBtn.textContent = "🌀 spiraling… x5 (" + Math.ceil(left/1000) + "s)";
+      frenzyBar.style.width = (100 * left / FRENZY_DURATION) + "%";
+      frenzyNote.textContent = "enjoy it while it lasts";
+    } else if(now < state.frenzyReadyAt){
+      var cd = state.frenzyReadyAt - now;
+      frenzyBtn.disabled = true;
+      frenzyBtn.textContent = "🌀 Doom Spiral (x5, 10s)";
+      frenzyBar.style.width = (100 - 100 * cd / FRENZY_COOLDOWN) + "%";
+      frenzyNote.textContent = "cooling down (" + Math.ceil(cd/1000) + "s)";
+    } else {
+      frenzyBtn.disabled = false;
+      frenzyBtn.textContent = "🌀 Doom Spiral (x5, 10s)";
+      frenzyBar.style.width = "0%";
+      frenzyNote.textContent = "ready";
+    }
+  }
+
+  /* ---------------- shop wiring ---------------- */
+  var buyScreenBtn = document.getElementById("buyScreen");
+  var buyBotBtn = document.getElementById("buyBot");
+  var buyClickBtn = document.getElementById("buyClick");
+  var buyFirmBtn = document.getElementById("buyFirm");
+
+  buyScreenBtn.addEventListener("click", function(){
+    if(state.screens >= MAX_SCREENS) return;
+    var cost = screenCost(state.screens + 1);
+    if(state.scrolls < cost) return;
+    state.scrolls -= cost;
+    state.screens += 1;
+    syncScreenCount();
+    refreshBotBadges();
+    render(); saveState();
+  });
+
+  buyBotBtn.addEventListener("click", function(){
+    var cost = botCost(state.bots);
+    if(state.scrolls < cost) return;
+    state.scrolls -= cost;
+    state.bots += 1;
+    refreshBotBadges();
+    restartAmbientScroll();
+    render(); saveState();
+  });
+
+  buyClickBtn.addEventListener("click", function(){
+    var cost = clickCost(state.clickLevel);
+    if(state.scrolls < cost) return;
+    state.scrolls -= cost;
+    state.clickLevel += 1;
+    render(); saveState();
+  });
+
+  buyFirmBtn.addEventListener("click", function(){
+    var cost = firmCost(state.firmLevel);
+    if(state.scrolls < cost) return;
+    state.scrolls -= cost;
+    state.firmLevel += 1;
+    restartAmbientScroll();
+    render(); saveState();
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function(){
+    state = JSON.parse(JSON.stringify(defaultState));
+    phonesWrap.innerHTML = "";
+    phoneEls = [];
+    syncScreenCount();
+    refreshBotBadges();
+    if(ambientTimer) clearInterval(ambientTimer);
+    render(); saveState();
+  });
+
+  /* ---------------- upgrades panel ---------------- */
+  var upgradesWrap = document.getElementById("upgradesWrap");
+  function renderUpgrades(){
+    upgradesWrap.innerHTML = "";
+    UPGRADES.forEach(function(u){
+      var owned = !!state.upgrades[u.id];
+      var unlocked = u.unlock(state);
+      var div = document.createElement("div");
+      div.className = "shop-item " + (owned ? "done" : (unlocked ? "" : "locked"));
+      var statusLine = owned ? "purchased" : (unlocked ? fmt(u.cost) + " scrolls" : "locked — " + u.unlockHint);
+      div.innerHTML =
+        '<div class="info">' +
+          '<div class="name">'+u.name+'</div>' +
+          '<div class="desc">'+u.desc+'</div>' +
+          '<div class="owned">'+statusLine+'</div>' +
+        '</div>' +
+        '<button class="buy-btn" '+((owned||!unlocked)?"disabled":"")+'>'+(owned?"✓":"Buy")+'</button>';
+      if(!owned && unlocked){
+        div.querySelector("button").addEventListener("click", function(){
+          if(state.scrolls < u.cost) return;
+          state.scrolls -= u.cost;
+          state.upgrades[u.id] = true;
+          render(); saveState();
+        });
+      }
+      upgradesWrap.appendChild(div);
+    });
+  }
+
+  /* ---------------- main render ---------------- */
+  function render(){
+    document.getElementById("scrollsDisplay").textContent = fmt(state.scrolls);
+    document.getElementById("rateDisplay").textContent = scrollsPerSecond().toFixed(1);
+    document.getElementById("lifetimeDisplay").textContent = fmt(state.lifetime);
+    document.getElementById("rankDisplay").textContent = rankFor(state.lifetime);
+
+    document.getElementById("screenOwned").textContent = state.screens;
+    document.getElementById("clickLvl").textContent = state.clickLevel;
+    document.getElementById("clickPowerNow").textContent = round1(clickPower());
+    document.getElementById("botOwned").textContent = state.bots;
+    document.getElementById("firmLvl").textContent = state.firmLevel;
+    document.getElementById("botRateNow").textContent = botRate().toFixed(1);
+
+    var sCost = screenCost(state.screens + 1);
+    buyScreenBtn.disabled = state.screens >= MAX_SCREENS || state.scrolls < sCost;
+    document.getElementById("screenCost").textContent = state.screens >= MAX_SCREENS ? "max" : fmt(sCost);
+
+    var bCost = botCost(state.bots);
+    buyBotBtn.disabled = state.scrolls < bCost;
+    document.getElementById("botCost").textContent = fmt(bCost);
+
+    var cCost = clickCost(state.clickLevel);
+    buyClickBtn.disabled = state.scrolls < cCost;
+    document.getElementById("clickCost").textContent = fmt(cCost);
+
+    var fCost = firmCost(state.firmLevel);
+    buyFirmBtn.disabled = state.scrolls < fCost;
+    document.getElementById("firmCost").textContent = fmt(fCost);
+
+    renderFrenzy();
+    renderUpgrades();
+  }
+
+  /* ---------------- persistence ---------------- */
+  var SAVE_KEY = "doomscrollFarmSave_v1";
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return JSON.parse(JSON.stringify(defaultState));
+      var parsed = JSON.parse(raw);
+      var merged = JSON.parse(JSON.stringify(defaultState));
+      for(var k in parsed){ if(k in merged || k === "upgrades") merged[k] = parsed[k]; }
+      if(!merged.upgrades) merged.upgrades = {};
+      return merged;
+    }catch(e){
+      return JSON.parse(JSON.stringify(defaultState));
+    }
+  }
+  function saveState(){
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ /* storage unavailable, play on */ }
+  }
+
+  /* ---------------- boot ---------------- */
+  function start(){
+    syncScreenCount();
+    refreshBotBadges();
+    restartAmbientScroll();
+    render();
+  }
+
+  if(window.claude && window.claude.hot){
+    window.claude.hot.snapshot(function(){ return { state: state }; });
+    if(window.claude.hot.ready){
+      window.claude.hot.ready(function(data){
+        if(data && data.state) state = data.state;
+        start();
+      });
+    } else {
+      if(window.claude.hot.data && window.claude.hot.data.state) state = window.claude.hot.data.state;
+      start();
+    }
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body></html>
